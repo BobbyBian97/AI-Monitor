@@ -1,0 +1,29 @@
+# === 敏感文件（含明文私钥/服务器信息，禁止提交）===
+SERVER.md
+deploy/
+local.properties
+
+# === 构建产物 ===
+.gradle/
+build/
+app/build/
+*.apk
+*.aab
+*.ap_
+*.dex
+captures/
+.externalNativeBuild/
+.cxx/
+
+# === IDE ===
+.idea/
+*.iml
+*.hprof
+
+# === Python（deploy 脚本的缓存）===
+__pycache__/
+*.py[cod]
+
+# === 系统 ===
+.DS_Store
+Thumbs.db

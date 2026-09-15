@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- 仪表盘环 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,4a8,8 0 1,0 0,16a8,8 0 1,0 0,-16zM12,6a6,6 0 1,1 0,12a6,6 0 1,1 0,-12z" />
+    <!-- 指针 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12.7,11.3l4.9,-4.9a1,1 0 0 1 1.4,1.4l-4.9,4.9a1,1 0 0 1 -1.4,-1.4z" />
+    <!-- 中心点 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,10.6a1.4,1.4 0 1,0 0,2.8a1.4,1.4 0 1,0 0,-2.8z" />
+</vector>

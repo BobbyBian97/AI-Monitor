@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 通知栏展开布局: 汇总标题 + 逐账户明细(名称/数值/进度条) + 更新时间 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingLeft="12dp"
+    android:paddingRight="12dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="4dp">
+
+    <TextView
+        android:id="@+id/nf_header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary" />
+
+    <!-- 分隔线: RemoteViews 不支持裸 View, 用空 LinearLayout 代替 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="2dp"
+        android:background="#1F808080"
+        android:orientation="horizontal" />
+
+    <LinearLayout android:id="@+id/nf_row_0" style="@style/NFRow">
+        <LinearLayout style="@style/NFRowLine">
+            <TextView android:id="@+id/nf_name_0" style="@style/NFName" />
+            <TextView android:id="@+id/nf_val_0" style="@style/NFVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/nf_bar_0" style="@style/NFBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/nf_row_1" style="@style/NFRow">
+        <LinearLayout style="@style/NFRowLine">
+            <TextView android:id="@+id/nf_name_1" style="@style/NFName" />
+            <TextView android:id="@+id/nf_val_1" style="@style/NFVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/nf_bar_1" style="@style/NFBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/nf_row_2" style="@style/NFRow">
+        <LinearLayout style="@style/NFRowLine">
+            <TextView android:id="@+id/nf_name_2" style="@style/NFName" />
+            <TextView android:id="@+id/nf_val_2" style="@style/NFVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/nf_bar_2" style="@style/NFBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/nf_row_3" style="@style/NFRow">
+        <LinearLayout style="@style/NFRowLine">
+            <TextView android:id="@+id/nf_name_3" style="@style/NFName" />
+            <TextView android:id="@+id/nf_val_3" style="@style/NFVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/nf_bar_3" style="@style/NFBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/nf_row_4" style="@style/NFRow">
+        <LinearLayout style="@style/NFRowLine">
+            <TextView android:id="@+id/nf_name_4" style="@style/NFName" />
+            <TextView android:id="@+id/nf_val_4" style="@style/NFVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/nf_bar_4" style="@style/NFBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/nf_row_5" style="@style/NFRow">
+        <LinearLayout style="@style/NFRowLine">
+            <TextView android:id="@+id/nf_name_5" style="@style/NFName" />
+            <TextView android:id="@+id/nf_val_5" style="@style/NFVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/nf_bar_5" style="@style/NFBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/nf_row_6" style="@style/NFRow">
+        <LinearLayout style="@style/NFRowLine">
+            <TextView android:id="@+id/nf_name_6" style="@style/NFName" />
+            <TextView android:id="@+id/nf_val_6" style="@style/NFVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/nf_bar_6" style="@style/NFBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/nf_row_7" style="@style/NFRow">
+        <LinearLayout style="@style/NFRowLine">
+            <TextView android:id="@+id/nf_name_7" style="@style/NFName" />
+            <TextView android:id="@+id/nf_val_7" style="@style/NFVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/nf_bar_7" style="@style/NFBar" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/nf_footer_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="6dp">
+
+        <TextView
+            android:id="@+id/nf_footer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="11sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <TextView
+            android:id="@+id/nf_refresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:text="刷新"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFFFF"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:background="#FF1565C0" />
+    </LinearLayout>
+</LinearLayout>
