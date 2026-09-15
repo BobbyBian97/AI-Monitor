@@ -1,17 +1,7 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
-
-// 更新服务器地址等私有配置存放于 local.properties（已被 .gitignore 排除），不进仓库。
-// 未配置时 UPDATE_MANIFEST_URL 为空字符串，应用跳过更新检查。
-val localProps = Properties().apply {
-    val f = rootProject.file("local.properties")
-    if (f.exists()) f.inputStream().use { load(it) }
-}
-val updateManifestUrl: String = localProps.getProperty("update.manifest.url", "")
 
 android {
     namespace = "com.aimonitor.app"
@@ -21,10 +11,8 @@ android {
         applicationId = "com.aimonitor.app"
         minSdk = 26
         targetSdk = 33
-        versionCode = 35
-        versionName = "1.25"
-
-        buildConfigField("String", "UPDATE_MANIFEST_URL", "\"$updateManifestUrl\"")
+        versionCode = 36
+        versionName = "1.26"
     }
 
     buildTypes {

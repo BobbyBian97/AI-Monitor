@@ -41,6 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -121,6 +122,8 @@ fun SettingsScreen(
     var askInstallPerm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var dlJob by remember { mutableStateOf<Job?>(null) }
+    // 更新地址由用户填写并保存在本机, 安装包内不内置任何服务器地址
+    var updateUrl by remember { mutableStateOf(AppSettings.loadUpdateUrl(ctx)) }
 
     fun tryInstall(f: File) {
         if (Build.VERSION.SDK_INT >= 26 && !ctx.packageManager.canRequestPackageInstalls()) {
@@ -187,11 +190,16 @@ fun SettingsScreen(
     }
 
     fun checkUpdate() {
+        if (AppSettings.loadUpdateUrl(ctx).isBlank()) {
+            upToDate = false
+            updError = "请先填写更新地址"
+            return
+        }
         checking = true
         upToDate = false
         updError = null
         scope.launch(Dispatchers.IO) {
-            val m = Updater.fetchManifest()
+            val m = Updater.fetchManifest(ctx)
             withContext(Dispatchers.Main) {
                 checking = false
                 when {
@@ -452,7 +460,29 @@ fun SettingsScreen(
             item {
                 AppCard {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = updateUrl,
+                            onValueChange = {
+                                updateUrl = it
+                                AppSettings.saveUpdateUrl(ctx, it)
+                            },
+                            label = { Text("更新地址") },
+                            placeholder = { Text("留空则不检查更新") },
+                            supportingText = {
+                                Text(
+                                    "填写更新清单 latest.json 的完整地址",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            singleLine = true,
+                            shape = FieldShape,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        InsetDivider()
+                        Row(
+                            Modifier.padding(top = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     "当前版本 v${BuildConfig.VERSION_NAME}",
@@ -484,6 +514,7 @@ fun SettingsScreen(
                         }
                     }
                 }
+                Hint("更新地址仅保存在本机, 不随安装包分发")
             }
 
             // ── 自定义背景 ──

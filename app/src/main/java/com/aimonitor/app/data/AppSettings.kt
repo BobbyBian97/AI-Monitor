@@ -18,6 +18,20 @@ object AppSettings {
     private const val KEY_CUSTOM_SKIN = "custom_skin"
     private const val KEY_NOTIF = "notif_enabled"
     private const val KEY_NOTIF_DETAIL = "notif_detail"
+    private const val KEY_UPDATE_URL = "update_manifest_url"
+
+    /**
+     * 应用内更新的清单地址, 由用户在设置页自行填写。
+     * 不内置默认值, 因此安装包内不含任何服务器地址; 为空表示未启用更新检查。
+     */
+    fun loadUpdateUrl(ctx: Context): String =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_UPDATE_URL, null)?.trim().orEmpty()
+
+    fun saveUpdateUrl(ctx: Context, url: String) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_UPDATE_URL, url.trim()).apply()
+    }
 
     /** 通知栏常驻展示 (默认开启) */
     fun loadNotifEnabled(ctx: Context): Boolean =

@@ -19,8 +19,6 @@ import java.security.MessageDigest
  * 安装包本地清理: [cleanup] 在启动时/下载前删除已安装或残留的更新包。
  */
 object Updater {
-    /** 更新清单地址由 local.properties 的 update.manifest.url 注入（见 app/build.gradle.kts），不入仓库。 */
-    private val MANIFEST_URL = BuildConfig.UPDATE_MANIFEST_URL
     private val http = OkHttpClient()
 
     class Manifest(
@@ -34,10 +32,15 @@ object Updater {
         val isNewer: Boolean get() = versionCode > BuildConfig.VERSION_CODE
     }
 
-    fun fetchManifest(): Manifest? {
-        if (MANIFEST_URL.isBlank()) return null
+    /**
+     * 清单地址取自设置页用户填写的地址 (见 [AppSettings.loadUpdateUrl])。
+     * 未填写时返回 null, 直接跳过更新检查。
+     */
+    fun fetchManifest(ctx: Context): Manifest? {
+        val manifestUrl = AppSettings.loadUpdateUrl(ctx)
+        if (manifestUrl.isBlank()) return null
         return runCatching {
-            http.newCall(Request.Builder().url(MANIFEST_URL).build()).execute().use { resp ->
+            http.newCall(Request.Builder().url(manifestUrl).build()).execute().use { resp ->
                 if (!resp.isSuccessful) return null
                 val body = resp.body ?: return null
                 val json = JSONObject(body.string())
