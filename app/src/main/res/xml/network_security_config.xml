@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 全局禁止明文 HTTP; 下载/更新服务器已切换 https://dl.ai-bong.cn -->
+<!-- 全局禁止明文 HTTP; 更新服务器地址见 local.properties 的 update.manifest.url -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false" />
 </network-security-config>
