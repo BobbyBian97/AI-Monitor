@@ -4,7 +4,9 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.IBinder
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,6 +31,9 @@ class MonitorService : Service() {
     private lateinit var cache: ResultCache
     private var loopJob: Job? = null
 
+    /** 存储加载完成门闩: 刷新前必须等待, 防止 lateinit 未初始化 */
+    private val ready = CompletableDeferred<Unit>()
+
     companion object {
         /** 通知栏「刷新」按钮触发的动作: 立即重拉一次而非等待定时间隔 */
         const val ACTION_REFRESH = "com.aimonitor.app.action.REFRESH"
@@ -36,8 +41,12 @@ class MonitorService : Service() {
         /** App 是否处于前台 (MainActivity ON_RESUME/ON_PAUSE 维护) */
         @Volatile var appVisible = false
 
-        /** 开启后台刷新 (随通知栏开关); 设置关闭时不启动 */
+        /** 服务是否已在运行: 避免每次 ON_RESUME 重复 startForegroundService 重载存储 */
+        @Volatile var running = false
+
+        /** 开启后台刷新 (随通知栏开关); 已在运行或设置关闭时不启动 */
         fun start(ctx: Context) {
+            if (running) return
             if (!AppSettings.loadNotifEnabled(ctx)) return
             ContextCompat.startForegroundService(ctx, Intent(ctx, MonitorService::class.java))
         }
@@ -49,19 +58,26 @@ class MonitorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        store = AccountStore(this)
-        cache = ResultCache(this)
+        running = true
+        // 立即以轻量占位通知进入前台 (startForeground 5 秒时限),
+        // 加密存储与缓存加载在 IO 线程完成后替换为真实通知
+        startForeground(BalanceNotifier.NOTIF_ID, BalanceNotifier.placeholder(this))
+        scope.launch {
+            store = AccountStore(this@MonitorService)
+            cache = ResultCache(this@MonitorService)
+            ready.complete(Unit)
+            val accounts = store.load()
+            val n = BalanceNotifier.build(this@MonitorService, accounts, cache.load())
+            if (n == null) {
+                stopSelf()
+            } else {
+                NotificationManagerCompat.from(this@MonitorService)
+                    .notify(BalanceNotifier.NOTIF_ID, n)
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // 立即进入前台: 先用缓存数据构建常驻通知 (5 秒时限内必须 startForeground)
-        val accounts = store.load()
-        val n = BalanceNotifier.build(this, accounts, cache.load())
-        if (n == null) {
-            stopSelf()
-            return START_NOT_STICKY
-        }
-        startForeground(BalanceNotifier.NOTIF_ID, n)
         if (intent?.action == ACTION_REFRESH) {
             // 通知栏手动刷新: 不受 appVisible 限制, 立即重拉一次 (不重启定时循环)
             AppLog.i("APP", "通知栏手动刷新")
@@ -84,6 +100,7 @@ class MonitorService : Service() {
     }
 
     private suspend fun refreshOnce() {
+        ready.await()
         val accounts = store.load()
         if (accounts.isEmpty()) return
         val results = coroutineScope {
@@ -95,6 +112,7 @@ class MonitorService : Service() {
     }
 
     override fun onDestroy() {
+        running = false
         scope.cancel()
         super.onDestroy()
     }

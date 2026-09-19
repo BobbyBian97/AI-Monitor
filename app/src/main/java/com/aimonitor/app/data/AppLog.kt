@@ -5,9 +5,12 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 应用内调试日志: 内存环形缓冲 + 文件持久化 (最近 [MAX] 条, 重启保留)。
+ * 磁盘读写全部在单线程 Executor 串行执行, 主线程只写内存缓冲。
  * 密钥只经 [fp] 记指纹, 绝不落明文。
  */
 object AppLog {
@@ -16,19 +19,24 @@ object AppLog {
     data class Entry(val time: Long, val level: String, val tag: String, val msg: String)
 
     private val buffer = ArrayDeque<Entry>(MAX)
-    private var file: File? = null
+    @Volatile private var file: File? = null
+    private val io = Executors.newSingleThreadExecutor()
+    private val initOnce = AtomicBoolean(false)
     private val timeFmt = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     private val dumpFmt = SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault())
 
-    /** 首次调用时加载历史并压缩日志文件 */
+    /** 首次调用时加载历史并压缩日志文件 (磁盘 IO 在后台串行执行) */
     fun init(ctx: Context) {
-        synchronized(buffer) {
-            if (file != null) return
-            file = File(ctx.filesDir, "applog.txt")
+        if (!initOnce.compareAndSet(false, true)) return
+        file = File(ctx.filesDir, "applog.txt")
+        io.execute {
             runCatching {
-                file!!.readLines().takeLast(MAX).forEach { line -> parse(line)?.let(buffer::addLast) }
-                // 压缩: 只保留缓冲内的行
-                file!!.writeText(buffer.joinToString("\n", postfix = "\n") { "${it.time}\t${it.level}\t${it.tag}\t${it.msg}" })
+                val f = file ?: return@execute
+                synchronized(buffer) {
+                    f.readLines().takeLast(MAX).forEach { line -> parse(line)?.let(buffer::addLast) }
+                    // 压缩: 只保留缓冲内的行
+                    f.writeText(buffer.joinToString("\n", postfix = "\n") { "${it.time}\t${it.level}\t${it.tag}\t${it.msg}" })
+                }
             }
         }
     }
@@ -41,6 +49,8 @@ object AppLog {
         synchronized(buffer) {
             buffer.addLast(e)
             while (buffer.size > MAX) buffer.removeFirst()
+        }
+        io.execute {
             runCatching { file?.appendText("${e.time}\t$level\t$tag\t${e.msg}\n") }
         }
     }
@@ -56,10 +66,8 @@ object AppLog {
     fun entries(): List<Entry> = synchronized(buffer) { buffer.toList().asReversed() }
 
     fun clear() {
-        synchronized(buffer) {
-            buffer.clear()
-            runCatching { file?.delete() }
-        }
+        synchronized(buffer) { buffer.clear() }
+        io.execute { runCatching { file?.delete() } }
     }
 
     fun timeLabel(t: Long): String = timeFmt.format(Date(t))

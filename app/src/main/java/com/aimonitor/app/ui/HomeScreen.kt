@@ -48,11 +48,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,6 +81,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.aimonitor.app.data.Account
 import com.aimonitor.app.data.BalanceResult
+import com.aimonitor.app.data.BalanceSummary
 import com.aimonitor.app.ui.theme.BadgeShape
 import com.aimonitor.app.ui.theme.Dims
 import com.aimonitor.app.ui.theme.HeroShape
@@ -104,7 +107,11 @@ fun HomeScreen(
     val accounts by vm.accounts.collectAsState()
     val results by vm.results.collectAsState()
     val refreshing by vm.refreshing.collectAsState()
-    val loading = refreshing || results.values.any { it is BalanceResult.Loading }
+    // derivedStateOf: 任一账户结果变化不再触发整页重组, 仅依赖项真正变化时才失效
+    val loading by remember {
+        derivedStateOf { refreshing || results.values.any { it is BalanceResult.Loading } }
+    }
+    val okCount by remember { derivedStateOf { okCount(results) } }
 
     // 拖动排序状态: 高度快照 (id→px) / 正在拖动的账户 / 累计位移
     val heights = remember { mutableStateMapOf<Long, Int>() }
@@ -120,7 +127,7 @@ fun HomeScreen(
                     Column {
                         Text("AI 余量监控")
                         Text(
-                            "${accounts.size} 个账户 · ${okCount(results)} 项正常",
+                            "${accounts.size} 个账户 · $okCount 项正常",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -202,6 +209,10 @@ fun HomeScreen(
                 ) {
                     item { SummaryCard(accounts, results) }
                     items(accounts, key = { it.id }) { account ->
+                        // 每项单独跟踪自己的结果: 其他账户刷新不重组本卡片
+                        val resultState = remember(account.id) {
+                            derivedStateOf { results[account.id] ?: BalanceResult.Idle }
+                        }
                         val isDragging = draggingId == account.id
                         Box(
                             Modifier
@@ -250,7 +261,7 @@ fun HomeScreen(
                         ) {
                             AccountCard(
                                 account = account,
-                                result = results[account.id] ?: BalanceResult.Idle,
+                                result = resultState.value,
                                 onEdit = { onEdit(account.id) },
                                 onRefresh = { vm.refreshOne(account.id) }
                             )
@@ -277,6 +288,9 @@ private fun PullRefreshBox(
     val restPx = with(density) { 48.dp.toPx() }   // 刷新时指示器停留位
     val offset = remember { mutableStateOf(0f) }
     val scope = rememberCoroutineScope()
+    // rememberUpdatedState: 手势回调始终读到最新值, 避免 remember{} 捕获首次旧值
+    val currentRefreshing by rememberUpdatedState(refreshing)
+    val currentOnRefresh by rememberUpdatedState(onRefresh)
 
     // 刷新结束后收起指示器
     LaunchedEffect(refreshing) {
@@ -306,12 +320,12 @@ private fun PullRefreshBox(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (offset.value > thresholdPx && !refreshing) {
-                    onRefresh()
+                if (offset.value > thresholdPx && !currentRefreshing) {
+                    currentOnRefresh()
                     scope.launch {
                         animate(offset.value, restPx, animationSpec = tween(200)) { v, _ -> offset.value = v }
                     }
-                } else if (offset.value > 0f && !refreshing) {
+                } else if (offset.value > 0f && !currentRefreshing) {
                     scope.launch {
                         animate(offset.value, 0f, animationSpec = tween(240)) { v, _ -> offset.value = v }
                     }
@@ -345,17 +359,19 @@ private fun PullRefreshBox(
 
 @Composable
 private fun SpinningRefresh(loading: Boolean) {
-    val transition = rememberInfiniteTransition()
-    val angle by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing))
-    )
-    Icon(
-        Icons.Filled.Refresh,
-        contentDescription = "刷新全部",
-        modifier = Modifier.rotate(if (loading) angle else 0f)
-    )
+    if (loading) {
+        // 仅加载中创建无限动画, 空闲时不跑帧
+        val transition = rememberInfiniteTransition(label = "refreshSpin")
+        val angle by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),
+            label = "refreshAngle"
+        )
+        Icon(Icons.Filled.Refresh, contentDescription = "刷新全部", modifier = Modifier.rotate(angle))
+    } else {
+        Icon(Icons.Filled.Refresh, contentDescription = "刷新全部")
+    }
 }
 
 private fun okCount(results: Map<Long, BalanceResult>): Int =
@@ -405,12 +421,7 @@ private fun EmptyState(modifier: Modifier = Modifier) {
 
 @Composable
 private fun SummaryCard(accounts: List<Account>, results: Map<Long, BalanceResult>) {
-    val totals = LinkedHashMap<String, Double>()
-    results.values.forEach { r ->
-        if (r is BalanceResult.Success) {
-            totals[r.currency] = (totals[r.currency] ?: 0.0) + r.total
-        }
-    }
+    val totals = BalanceSummary.currencyTotals(results.values)
     if (totals.isEmpty()) return
 
     val covered = results.values.count { it is BalanceResult.Success }
@@ -486,12 +497,7 @@ private fun SummaryCard(accounts: List<Account>, results: Map<Long, BalanceResul
                 )
             }
             Spacer(Modifier.weight(1f))
-            val planTotals = LinkedHashMap<String, Double>()
-            accounts.forEach { a ->
-                a.planStats()?.let { st ->
-                    planTotals[a.currency] = (planTotals[a.currency] ?: 0.0) + st.spent
-                }
-            }
+            val planTotals = BalanceSummary.planTotals(accounts)
             if (planTotals.isNotEmpty()) {
                 Text(
                     "套餐累计投入  " + planTotals.entries.joinToString("   ") {

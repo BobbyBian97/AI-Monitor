@@ -52,6 +52,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** 用量窗口剩余百分比警示阈值: ≤40% 转警示色, ≤20% 转错误色 */
+private const val USAGE_WARN_REMAINING = 40
+private const val USAGE_ERROR_REMAINING = 20
+
+/** 套餐续费临近提醒阈值 (天) */
+private const val RENEW_SOON_DAYS = 3
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountCard(
@@ -171,8 +178,9 @@ fun AccountCard(
                         val remaining = (100 - w.percent).coerceIn(0, 100)
                         val hasAbsolute = w.used != null && w.quota != null
                         val levelColor = when {
-                            w.status != "ok" || remaining <= 20 -> MaterialTheme.colorScheme.error
-                            remaining <= 40 -> status.warn
+                            w.status != "ok" || remaining <= USAGE_ERROR_REMAINING ->
+                                MaterialTheme.colorScheme.error
+                            remaining <= USAGE_WARN_REMAINING -> status.warn
                             else -> status.ok
                         }
                         // 行 1: 窗口名 + 重置倒计时
@@ -293,7 +301,8 @@ fun AccountCard(
                 else -> null
             }
             account.planStats()?.let { st ->
-                val renewSoon = st.nextRenewAt - System.currentTimeMillis() < 3 * 86_400_000L
+                val renewSoon =
+                    st.nextRenewAt - System.currentTimeMillis() < RENEW_SOON_DAYS * 86_400_000L
                 Spacer(Modifier.height(Dims.gapM))
                 Box(
                     Modifier

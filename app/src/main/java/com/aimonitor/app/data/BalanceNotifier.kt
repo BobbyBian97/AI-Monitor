@@ -57,11 +57,23 @@ object BalanceNotifier {
     /** 刷新通知: 设置关闭/无权限/无账户时移除 */
     fun update(ctx: Context, accounts: List<Account>, results: Map<Long, BalanceResult>) {
         val nm = NotificationManagerCompat.from(ctx)
-        if (!AppSettings.loadNotifEnabled(ctx) || !nm.areNotificationsEnabled() || accounts.isEmpty()) {
-            nm.cancel(NOTIF_ID)
-            return
+        val n = if (!AppSettings.loadNotifEnabled(ctx) || !nm.areNotificationsEnabled() || accounts.isEmpty()) {
+            null
+        } else {
+            build(ctx, accounts, results)
         }
-        nm.notify(NOTIF_ID, build(ctx, accounts, results)!!)
+        if (n == null) nm.cancel(NOTIF_ID) else nm.notify(NOTIF_ID, n)
+    }
+
+    /** 轻量占位通知: 供前台服务在数据加载完成前立即 startForeground (满足 5 秒时限) */
+    fun placeholder(ctx: Context): Notification {
+        ensureChannel(ctx)
+        return NotificationCompat.Builder(ctx, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_stat_monitor)
+            .setContentTitle("AI 余量监控")
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
     }
 
     /** 构建常驻通知 (供前台服务 startForeground 使用); 设置关闭或无账户时返回 null */
@@ -69,11 +81,10 @@ object BalanceNotifier {
         if (!AppSettings.loadNotifEnabled(ctx) || accounts.isEmpty()) return null
         ensureChannel(ctx)
 
-        val totals = LinkedHashMap<String, Double>()
+        val totals = BalanceSummary.currencyTotals(results.values)
         val rows = accounts.map { a ->
             when (val r = results[a.id]) {
                 is BalanceResult.Success -> {
-                    totals[r.currency] = (totals[r.currency] ?: 0.0) + r.total
                     Row(
                         a.displayName,
                         "%.2f %s".format(r.total, r.currency),
@@ -101,10 +112,7 @@ object BalanceNotifier {
 
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         // 套餐累计投入 (按币种)
-        val planTotals = LinkedHashMap<String, Double>()
-        accounts.forEach { a ->
-            a.planStats()?.let { planTotals[a.currency] = (planTotals[a.currency] ?: 0.0) + it.spent }
-        }
+        val planTotals = BalanceSummary.planTotals(accounts)
         val footerText = "更新于 $time · ${accounts.size} 个账户" +
             (if (rows.size > MAX_ROWS) " · 仅显示前 $MAX_ROWS 项" else "") +
             planTotals.entries.joinToString("") { " · 累计投入 ${"%.1f".format(it.value)} ${it.key}" }

@@ -22,8 +22,10 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.core.content.ContextCompat
@@ -43,6 +45,8 @@ import com.aimonitor.app.ui.SettingsScreen
 import com.aimonitor.app.ui.decodeBg
 import com.aimonitor.app.ui.theme.AIMonitorTheme
 import com.aimonitor.app.ui.theme.ImageSkin
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 sealed class Screen {
     abstract val rank: Int
@@ -65,7 +69,10 @@ class MainActivity : ComponentActivity() {
             var screen by remember { mutableStateOf<Screen>(Screen.Home) }
             var skinId by remember { mutableStateOf(AppSettings.loadSkinId(ctx)) }
             var bgPath by remember { mutableStateOf(AppSettings.loadBgPath(ctx)) }
-            val bgBitmap = remember(bgPath) { decodeBg(bgPath) }
+            // 异步解码: 大图解码不再阻塞首帧
+            val bgBitmap by produceState<ImageBitmap?>(null, bgPath) {
+                value = withContext(Dispatchers.IO) { decodeBg(bgPath) }
+            }
             val skin = remember(skinId) { ImageSkin.resolve(ctx, skinId) }
             val vm: MainViewModel = viewModel()
             // Android 13+ 通知权限 (通知栏常驻展示)

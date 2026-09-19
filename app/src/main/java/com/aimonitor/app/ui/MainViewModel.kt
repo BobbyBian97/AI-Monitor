@@ -12,6 +12,7 @@ import com.aimonitor.app.data.BalanceRepository
 import com.aimonitor.app.data.BalanceResult
 import com.aimonitor.app.data.ResultCache
 import com.aimonitor.app.data.Updater
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -23,11 +24,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val store = AccountStore(app)
-    private val cache = ResultCache(app)
+    // 加密存储创建与加载在 IO 线程完成 (见 init);
+    // 完成前所有写持久化操作经 [storeReady] 排队, 防止用空列表覆盖账户
+    private val storeReady = CompletableDeferred<Unit>()
+    private lateinit var store: AccountStore
+    private lateinit var cache: ResultCache
 
     private val _accounts = MutableStateFlow<List<Account>>(emptyList())
     val accounts: StateFlow<List<Account>> = _accounts.asStateFlow()
@@ -42,18 +47,33 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var lastRefreshAt = 0L
 
     init {
-        _accounts.value = store.load()
-        // 立即恢复上次结果, 避免重启后整页「尚未刷新」
-        _results.value = cache.load()
-        updateNotification()
-        // 启动清理: 删除已安装/残留的更新 APK
-        viewModelScope.launch(Dispatchers.IO) { Updater.cleanup(getApplication()) }
-        refreshAll()
+        viewModelScope.launch(Dispatchers.IO) {
+            val appContext = getApplication<Application>()
+            store = AccountStore(appContext)
+            cache = ResultCache(appContext)
+            val accounts = store.load()
+            // 立即恢复上次结果, 避免重启后整页「尚未刷新」
+            val results = cache.load()
+            storeReady.complete(Unit)
+            withContext(Dispatchers.Main) {
+                _accounts.value = accounts
+                _results.value = results
+            }
+            updateNotification()
+            // 启动清理: 删除已安装/残留的更新 APK
+            Updater.cleanup(appContext)
+            refreshAll()
+        }
     }
 
-    /** 通知栏常驻展示 (刷新后调用; 设置开关切换时也调用) */
+    /** 通知栏常驻展示 (刷新后调用; 设置开关切换时也调用); 通知构建移 IO 线程 */
     fun updateNotification() {
-        BalanceNotifier.update(getApplication(), _accounts.value, _results.value)
+        val app = getApplication<Application>()
+        val accounts = _accounts.value
+        val results = _results.value
+        viewModelScope.launch(Dispatchers.IO) {
+            BalanceNotifier.update(app, accounts, results)
+        }
     }
 
     fun refreshAll() {
@@ -77,7 +97,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 }.awaitAll()
             } finally {
                 _refreshing.value = false
-                cache.save(_results.value)
+                persistResults()
                 updateNotification()
             }
         }
@@ -91,9 +111,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val r = BalanceRepository.fetch(account)
                 _results.update { it + (id to r) }
             } finally {
-                cache.save(_results.value)
+                persistResults()
                 updateNotification()
             }
+        }
+    }
+
+    /** 结果缓存写盘 (IO 线程) */
+    private fun persistResults() {
+        val snapshot = _results.value
+        viewModelScope.launch(Dispatchers.IO) { cache.save(snapshot) }
+    }
+
+    /** 账户列表写盘 (IO 线程; 等待初始加载完成, 防止用空列表覆盖) */
+    private fun persistAccounts(list: List<Account>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            storeReady.await()
+            store.save(list)
         }
     }
 
@@ -105,7 +139,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var periodicJob: Job? = null
     private var periodicWanted = false
 
-    /** 定时刷新间隔 (全局设置, 默认 30 秒) */
+    /** 定时刷新间隔 (全局设置, 默认 1 分钟) */
     private val _refreshIntervalMs = MutableStateFlow(AppSettings.loadRefreshInterval(app))
     val refreshIntervalMs: StateFlow<Long> = _refreshIntervalMs.asStateFlow()
 
@@ -140,22 +174,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (periodicWanted) startPeriodicRefresh()
     }
 
-    fun nextId(): Long = store.nextId(_accounts.value)
+    fun nextId(): Long = (_accounts.value.maxOfOrNull { it.id } ?: 0L) + 1L
 
     fun saveAccount(account: Account) {
         val list = _accounts.value.toMutableList()
         val idx = list.indexOfFirst { it.id == account.id }
         if (idx >= 0) list[idx] = account else list.add(account)
         _accounts.value = list
-        store.save(list)
+        persistAccounts(list)
         refreshOne(account.id)
     }
 
     fun deleteAccount(id: Long) {
         _accounts.value = _accounts.value.filterNot { it.id == id }
-        store.save(_accounts.value)
+        persistAccounts(_accounts.value)
         _results.update { it - id }
-        cache.save(_results.value)
+        persistResults()
         updateNotification()
     }
 
@@ -167,7 +201,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val item = list.removeAt(from)
         list.add(toIndex.coerceIn(0, list.size), item)
         _accounts.value = list
-        store.save(list)
+        persistAccounts(list)
         updateNotification()
     }
 }

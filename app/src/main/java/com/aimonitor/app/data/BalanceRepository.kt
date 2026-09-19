@@ -3,6 +3,8 @@ package com.aimonitor.app.data
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -25,33 +27,39 @@ object BalanceRepository {
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
+        .callTimeout(30, TimeUnit.SECONDS)
         .build()
 
+    /** 并发上限: 全部账户同时刷新时限制在途请求数, 避免突发大量连接 */
+    private val fetchGate = Semaphore(4)
+
     suspend fun fetch(account: Account): BalanceResult = withContext(Dispatchers.IO) {
-        val t0 = System.currentTimeMillis()
-        try {
-            val r = when (account.type) {
-                ProviderType.DEEPSEEK -> fetchDeepSeek(account)
-                ProviderType.SILICONFLOW -> fetchSiliconFlow(account)
-                ProviderType.MOONSHOT -> fetchMoonshot(account)
-                ProviderType.ZHIPU -> fetchZhipu(account)
-                ProviderType.VOLCENGINE -> fetchVolcano(account)
-                ProviderType.OPENCODE -> fetchOpencode(account)
-                ProviderType.OPENROUTER -> fetchOpenRouter(account)
-                ProviderType.ONE_API -> fetchOneApi(account)
-                ProviderType.CUSTOM -> fetchCustom(account)
+        fetchGate.withPermit {
+            val t0 = System.currentTimeMillis()
+            try {
+                val r = when (account.type) {
+                    ProviderType.DEEPSEEK -> fetchDeepSeek(account)
+                    ProviderType.SILICONFLOW -> fetchSiliconFlow(account)
+                    ProviderType.MOONSHOT -> fetchMoonshot(account)
+                    ProviderType.ZHIPU -> fetchZhipu(account)
+                    ProviderType.VOLCENGINE -> fetchVolcano(account)
+                    ProviderType.OPENCODE -> fetchOpencode(account)
+                    ProviderType.OPENROUTER -> fetchOpenRouter(account)
+                    ProviderType.ONE_API -> fetchOneApi(account)
+                    ProviderType.CUSTOM -> fetchCustom(account)
+                }
+                AppLog.i(
+                    "FETCH",
+                    "${account.displayName} · ${account.type.displayName} → ${describe(r)} · ${System.currentTimeMillis() - t0}ms"
+                )
+                r
+            } catch (e: Exception) {
+                AppLog.e(
+                    "FETCH",
+                    "${account.displayName} · ${account.type.displayName} 异常 ${e.javaClass.simpleName}: ${e.message ?: "无信息"}"
+                )
+                BalanceResult.Error(friendlyError(e))
             }
-            AppLog.i(
-                "FETCH",
-                "${account.displayName} · ${account.type.displayName} → ${describe(r)} · ${System.currentTimeMillis() - t0}ms"
-            )
-            r
-        } catch (e: Exception) {
-            AppLog.e(
-                "FETCH",
-                "${account.displayName} · ${account.type.displayName} 异常 ${e.javaClass.simpleName}: ${e.message ?: "无信息"}"
-            )
-            BalanceResult.Error(friendlyError(e))
         }
     }
 
@@ -64,23 +72,15 @@ object BalanceRepository {
         is BalanceResult.Idle -> "Idle"
     }
 
-    private fun get(url: String, apiKey: String): JSONObject {
-        val req = Request.Builder()
-            .url(url)
-            .header("Authorization", "Bearer $apiKey")
-            .build()
-        client.newCall(req).execute().use { resp ->
-            val body = resp.body?.string() ?: ""
-            if (!resp.isSuccessful) throw IOException("HTTP ${resp.code}: ${body.take(120)}")
-            return JSONObject(body)
-        }
-    }
+    /** GET 请求, Authorization 头为 Bearer <apiKey> */
+    private fun get(url: String, apiKey: String): JSONObject =
+        getAuthed(url, "Bearer $apiKey")
 
-    /** 同 [get], 但 Authorization 头不带 Bearer 前缀 */
-    private fun getRaw(url: String, apiKey: String): JSONObject {
+    /** GET 请求, Authorization 头原样使用 (如智谱不带 Bearer 前缀) */
+    private fun getAuthed(url: String, authHeader: String): JSONObject {
         val req = Request.Builder()
             .url(url)
-            .header("Authorization", apiKey)
+            .header("Authorization", authHeader)
             .build()
         client.newCall(req).execute().use { resp ->
             val body = resp.body?.string() ?: ""
@@ -138,30 +138,42 @@ object BalanceRepository {
     }
 
     /**
-     * 智谱: Coding Plan 密钥优先查套餐配额 (5小时/周 百分比 + 月工具调用量),
-     * 无套餐数据时回退余额查询 (认证头均为 Authorization: <key>, 不带 Bearer)
+     * 智谱: 套餐配额查询与余额查询并行发出, 优先取套餐窗口数据,
+     * 无套餐数据时用余额结果 (认证头均为 Authorization: <key>, 不带 Bearer)
      */
-    private fun fetchZhipu(a: Account): BalanceResult {
-        try {
-            val quotaBase = if (a.baseUrl.contains("z.ai", ignoreCase = true))
-                "https://api.z.ai" else "https://open.bigmodel.cn"
-            val json = getRaw("$quotaBase/api/monitor/usage/quota/limit", a.apiKey)
-            val data = json.optJSONObject("data")
-            if (data != null && json.optBoolean("success", true)) {
-                val windows = parseZhipuQuota(data)
-                if (windows.isNotEmpty()) {
-                    AppLog.i("ZHIPU", "quota 接口命中 → ${windows.size} 窗口(${windows.joinToString { it.label }})")
-                    return BalanceResult.Usage(windows)
+    private suspend fun fetchZhipu(a: Account): BalanceResult = coroutineScope {
+        val quotaDeferred = async {
+            try {
+                val quotaBase = if (a.baseUrl.contains("z.ai", ignoreCase = true))
+                    "https://api.z.ai" else "https://open.bigmodel.cn"
+                val json = getAuthed("$quotaBase/api/monitor/usage/quota/limit", a.apiKey)
+                val data = json.optJSONObject("data")
+                if (data != null && json.optBoolean("success", true)) {
+                    parseZhipuQuota(data)
+                } else {
+                    AppLog.i("ZHIPU", "quota 接口无 data (非套餐密钥?), 回退余额查询")
+                    emptyList()
                 }
-                AppLog.i("ZHIPU", "quota 接口无窗口数据, 回退余额查询")
-            } else {
-                AppLog.i("ZHIPU", "quota 接口无 data (非套餐密钥?), 回退余额查询")
+            } catch (e: IOException) {
+                // 非套餐密钥: 回退余额查询
+                AppLog.i("ZHIPU", "quota 接口失败 ${e.javaClass.simpleName}: ${e.message?.take(70)} → 回退余额查询")
+                emptyList()
             }
-        } catch (e: IOException) {
-            // 非套餐密钥: 回退余额查询
-            AppLog.i("ZHIPU", "quota 接口失败 ${e.javaClass.simpleName}: ${e.message?.take(70)} → 回退余额查询")
         }
-        val json = getRaw(
+        val balanceDeferred = async { fetchZhipuBalance(a) }
+        val windows = quotaDeferred.await()
+        if (windows.isNotEmpty()) {
+            balanceDeferred.cancel()
+            AppLog.i("ZHIPU", "quota 接口命中 → ${windows.size} 窗口(${windows.joinToString { it.label }})")
+            BalanceResult.Usage(windows)
+        } else {
+            balanceDeferred.await()
+        }
+    }
+
+    /** 智谱余额查询 (quota 接口无窗口数据时的回退路径) */
+    private fun fetchZhipuBalance(a: Account): BalanceResult {
+        val json = getAuthed(
             "${ProviderType.ZHIPU.defaultBaseUrl}/api/biz/account/query-customer-account-report",
             a.apiKey
         )

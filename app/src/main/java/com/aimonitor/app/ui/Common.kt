@@ -1,6 +1,7 @@
 package com.aimonitor.app.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -155,6 +156,17 @@ fun RollingNumber(
             shown.animateTo(value.toFloat(), tween(600, easing = FastOutSlowInEasing))
         }
     }
+    // 叶子 Composable: 动画值的读取隔离在叶子作用域内, 父级不随动画帧重组
+    RollingNumberText(shown, style, modifier, color)
+}
+
+@Composable
+private fun RollingNumberText(
+    shown: Animatable<Float, AnimationVector1D>,
+    style: SpanStyle,
+    modifier: Modifier,
+    color: Color
+) {
     Text(
         buildAnnotatedString { withStyle(style) { append("%.2f".format(shown.value)) } },
         color = color,

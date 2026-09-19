@@ -22,10 +22,13 @@ class AccountStore(context: Context) {
 
     fun load(): List<Account> {
         val raw = prefs.getString(KEY, null) ?: return emptyList()
-        return runCatching {
-            val arr = JSONArray(raw)
-            (0 until arr.length()).map { i -> fromJson(arr.getJSONObject(i)) }
-        }.getOrDefault(emptyList())
+        val arr = runCatching { JSONArray(raw) }.getOrElse { return emptyList() }
+        // 逐条容错: 单条损坏只跳过该条, 避免解析失败清空全部后 save 覆盖掉所有账户
+        return (0 until arr.length()).mapNotNull { i ->
+            runCatching { fromJson(arr.getJSONObject(i)) }
+                .onFailure { AppLog.e("STORE", "账户数据第 $i 条损坏, 已跳过: ${it.message}") }
+                .getOrNull()
+        }
     }
 
     fun save(accounts: List<Account>) {
@@ -65,9 +68,6 @@ class AccountStore(context: Context) {
         planCycleDays = o.optInt("planCycleDays", 0),
         planStartAt = o.optLong("planStartAt", 0L)
     )
-
-    fun nextId(accounts: List<Account>): Long =
-        (accounts.maxOfOrNull { it.id } ?: 0L) + 1L
 
     companion object {
         private const val KEY = "accounts_json"

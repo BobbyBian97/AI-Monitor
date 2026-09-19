@@ -11,13 +11,19 @@ android {
         applicationId = "com.aimonitor.app"
         minSdk = 26
         targetSdk = 33
-        versionCode = 36
-        versionName = "1.26"
+        versionCode = 37
+        versionName = "1.27"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // 开启混淆与资源压缩: 精简 material-icons-extended 等库带来的体积
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {
