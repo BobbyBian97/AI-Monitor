@@ -15,11 +15,16 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * 应用内更新: 拉取 latest.json → 比对 versionCode → 下载 APK 到私有目录 → SHA-256 校验。
+ * 应用内更新: 拉取更新清单 (默认 GitHub Releases API, 或自建 latest.json) →
+ * 比对版本 → 下载 APK 到私有目录 → SHA-256 校验。
  * 安装包本地清理: [cleanup] 在启动时/下载前删除已安装或残留的更新包。
  */
 object Updater {
     private val http = OkHttpClient()
+
+    /** 默认更新源: 本仓库 GitHub Releases (仓库公开, 该地址无敏感性) */
+    private const val GITHUB_RELEASE_API =
+        "https://api.github.com/repos/BobbyBian97/AI-Monitor/releases/latest"
 
     class Manifest(
         val version: String,
@@ -29,34 +34,83 @@ object Updater {
         val name: String,
         val notes: List<String>
     ) {
-        val isNewer: Boolean get() = versionCode > BuildConfig.VERSION_CODE
+        val isNewer: Boolean
+            get() = versionCode > BuildConfig.VERSION_CODE ||
+                (versionCode == 0 && isNewerVersion(version, BuildConfig.VERSION_NAME))
     }
 
     /**
-     * 清单地址取自设置页用户填写的地址 (见 [AppSettings.loadUpdateUrl])。
-     * 未填写时返回 null, 直接跳过更新检查。
+     * 更新清单获取: 设置页填写了地址则用自建 latest.json, 留空则用 GitHub Releases。
      */
     fun fetchManifest(ctx: Context): Manifest? {
-        val manifestUrl = AppSettings.loadUpdateUrl(ctx)
-        if (manifestUrl.isBlank()) return null
+        val manifestUrl = AppSettings.loadUpdateUrl(ctx).ifBlank { GITHUB_RELEASE_API }
         return runCatching {
             http.newCall(Request.Builder().url(manifestUrl).build()).execute().use { resp ->
                 if (!resp.isSuccessful) return null
                 val body = resp.body ?: return null
-                val json = JSONObject(body.string())
-                val notes = json.optJSONArray("notes")?.let { arr ->
-                    (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }
-                } ?: emptyList()
-                Manifest(
-                    version = json.optString("version"),
-                    versionCode = json.optInt("versionCode", 0),
-                    url = json.optString("url"),
-                    sha256 = json.optString("sha256", ""),
-                    name = json.optString("name", ""),
-                    notes = notes
-                )
+                parseManifest(JSONObject(body.string()))
             }
         }.getOrNull()
+    }
+
+    /** 兼容两种清单格式: GitHub Releases API 与自建 latest.json */
+    private fun parseManifest(json: JSONObject): Manifest? {
+        // GitHub Releases API: {"tag_name":"v1.27","name":...,"body":...,"assets":[...]}
+        if (json.has("tag_name")) {
+            var apkUrl = ""
+            var sha256 = ""
+            json.optJSONArray("assets")?.let { arr ->
+                for (i in 0 until arr.length()) {
+                    val a = arr.optJSONObject(i) ?: continue
+                    if (a.optString("name").endsWith(".apk", ignoreCase = true)) {
+                        apkUrl = a.optString("browser_download_url")
+                        // GitHub 资产自带 digest (sha256:<hex>), 供下载后校验
+                        sha256 = a.optString("digest").removePrefix("sha256:")
+                        break
+                    }
+                }
+            }
+            if (apkUrl.isBlank()) return null
+            return Manifest(
+                version = json.optString("tag_name").trim().removePrefix("v").removePrefix("V"),
+                versionCode = 0,
+                url = apkUrl,
+                sha256 = sha256,
+                name = json.optString("name"),
+                notes = markdownNotes(json.optString("body"))
+            )
+        }
+        // 自建 latest.json
+        val notes = json.optJSONArray("notes")?.let { arr ->
+            (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }
+        } ?: emptyList()
+        return Manifest(
+            version = json.optString("version"),
+            versionCode = json.optInt("versionCode", 0),
+            url = json.optString("url"),
+            sha256 = json.optString("sha256", ""),
+            name = json.optString("name", ""),
+            notes = notes
+        )
+    }
+
+    /** Release 正文转更新要点: 去标题行/列表符号, 取前 10 条 */
+    private fun markdownNotes(body: String): List<String> =
+        body.lines().map { it.trim() }
+            .map { it.removePrefix("- ").removePrefix("* ").trim() }
+            .filter { it.isNotBlank() && !it.startsWith("#") }
+            .take(10)
+
+    /** 版本号按段数值比较: 1.10 > 1.9 */
+    fun isNewerVersion(remote: String, current: String): Boolean {
+        val r = remote.split('.').map { it.trim().toIntOrNull() ?: 0 }
+        val c = current.split('.').map { it.trim().toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(r.size, c.size)) {
+            val rv = r.getOrElse(i) { 0 }
+            val cv = c.getOrElse(i) { 0 }
+            if (rv != cv) return rv > cv
+        }
+        return false
     }
 
     /**

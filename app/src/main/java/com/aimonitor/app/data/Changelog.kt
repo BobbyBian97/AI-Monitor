@@ -17,6 +17,14 @@ object Changelog {
 
     val releases = listOf(
         Release(
+            "1.28", "2026-09-19", "检查更新接入 GitHub",
+            listOf(
+                "检查更新默认从 GitHub Releases 获取, 无需再手动填写更新地址",
+                "下载校验使用 GitHub 资产自带的 SHA-256 摘要",
+                "仍支持填写自建 latest.json 地址作为备用更新源"
+            )
+        ),
+        Release(
             "1.27", "2026-09-19", "整体优化与加固",
             listOf(
                 "修复账户数据解析失败可能被整表覆盖的风险, 单条损坏自动跳过",

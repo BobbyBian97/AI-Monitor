@@ -128,11 +128,6 @@ fun UpdateSettingsSection() {
     }
 
     fun checkUpdate() {
-        if (AppSettings.loadUpdateUrl(ctx).isBlank()) {
-            upToDate = false
-            updError = "请先填写更新地址"
-            return
-        }
         checking = true
         upToDate = false
         updError = null
@@ -160,10 +155,10 @@ fun UpdateSettingsSection() {
                         AppSettings.saveUpdateUrl(ctx, it)
                     },
                     label = { Text("更新地址") },
-                    placeholder = { Text("留空则不检查更新") },
+                    placeholder = { Text("留空使用 GitHub Releases") },
                     supportingText = {
                         Text(
-                            "填写更新清单 latest.json 的完整地址",
+                            "默认从 GitHub Releases 检查更新; 也可填写自建 latest.json 地址",
                             style = MaterialTheme.typography.labelSmall
                         )
                     },
@@ -207,7 +202,7 @@ fun UpdateSettingsSection() {
                 }
             }
         }
-        Hint("更新地址仅保存在本机, 不随安装包分发")
+        Hint("更新地址仅保存在本机, 不随安装包分发; 直连 GitHub 不畅时可改用自建地址")
     }
 
     // 新版本弹窗
