@@ -49,12 +49,13 @@ data class StatusColors(
     val idle: Color
 )
 
-private val LightStatus = StatusColors(
+/** 亮暗两套状态语义色 (App 内经 LocalStatusColors 取用; 通知栏经 BalanceNotifier 按面板深浅取用) */
+internal val LightStatus = StatusColors(
     ok = Color(0xFF2E9E5B), warn = Color(0xFFF59E0B),
     error = Color(0xFFD93A3A), idle = Color(0xFFAEB8C7)
 )
 
-private val DarkStatus = StatusColors(
+internal val DarkStatus = StatusColors(
     ok = Color(0xFF57C584), warn = Color(0xFFF5A83D),
     error = Color(0xFFE57676), idle = Color(0xFF6B7480)
 )
@@ -148,7 +149,8 @@ object Skins {
     fun byId(id: String): Skin = all.firstOrNull { it.id == id } ?: all.first()
 }
 
-private fun onOf(c: Color): Color =
+/** 按背景亮度选可读前景色: 亮底取近黑, 暗底取白 (徽章/品牌色文字共用) */
+fun onOf(c: Color): Color =
     if (c.luminance() > 0.55f) Color(0xFF15181E) else Color.White
 
 private fun Skin.toScheme(): ColorScheme =

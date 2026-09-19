@@ -15,10 +15,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.SystemUpdateAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,52 +40,54 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.aimonitor.app.ui.theme.Dims
 
-private data class HelpEntry(val title: String, val icon: String, val lines: List<String>)
+private data class HelpEntry(val title: String, val icon: ImageVector, val lines: List<String>)
 
 private val helpEntries = listOf(
-    HelpEntry("账户监控", "📊", listOf(
+    HelpEntry("账户监控", Icons.Filled.QueryStats, listOf(
         "支持 DeepSeek / SiliconFlow / 月之暗面 / 智谱 / 火山引擎 / OpenRouter / OneAPI 类中转及自定义接口。",
         "余额类账户显示总额与各分项; 套餐用量类账户显示各窗口已用百分比进度条。",
         "可设置低额阈值: 余量低于阈值或用量超 80% 时, 卡片与通知栏标红警示。",
         "点击卡片进入编辑, 卡片内按钮单独刷新该账户。"
     )),
-    HelpEntry("拖动排序", "⇅", listOf(
+    HelpEntry("拖动排序", Icons.Filled.SwapVert, listOf(
         "在主界面长按任意账户卡片, 震动后即可上下拖动调整显示顺序。",
         "排序会立即保存, 通知栏明细顺序同步更新。"
     )),
-    HelpEntry("手动与定时刷新", "🔄", listOf(
+    HelpEntry("手动与定时刷新", Icons.Filled.Sync, listOf(
         "顶栏刷新按钮或列表下拉可手动刷新全部账户。",
         "设置中可选刷新间隔: 15 秒 ~ 10 分钟 (默认 1 分钟)。",
         "App 在前台时自动按间隔刷新; 退到后台由常驻服务继续同频刷新, 重开 App 直接显示最新数据。"
     )),
-    HelpEntry("通知栏速览", "🔔", listOf(
+    HelpEntry("通知栏速览", Icons.Filled.Notifications, listOf(
         "常驻通知栏展示余量: 折叠时为汇总 + 各账户速览一行, 上下滑动通知可展开查看逐账户明细与进度条。",
         "设置中「折叠时显示明细」可关闭折叠态明细, 仅保留系统默认摘要。",
         "点击通知回到 App。"
     )),
-    HelpEntry("订阅花费统计", "💰", listOf(
+    HelpEntry("订阅花费统计", Icons.Filled.Payments, listOf(
         "编辑账户时可设置套餐: 每期价格 + 周期 (周/月/季/年) + 购买日期。",
         "卡片与汇总卡显示已订期数、累计投入和下次续费日期。"
     )),
-    HelpEntry("皮肤与背景", "🎨", listOf(
+    HelpEntry("皮肤与背景", Icons.Filled.Palette, listOf(
         "内置 10 套配色主题; 也可从相册选图, 自动提取配色生成专属皮肤并同时设为背景。",
         "自定义背景可在设置中单独清除。"
     )),
-    HelpEntry("调试日志", "📜", listOf(
+    HelpEntry("调试日志", Icons.Filled.Article, listOf(
         "记录每次请求的结果与错误信息, 用于排查接口异常。"
     )),
-    HelpEntry("检查更新", "⬆️", listOf(
-        "在设置页填写更新清单 latest.json 的地址后, 即可一键检查新版本。",
+    HelpEntry("检查更新", Icons.Filled.SystemUpdateAlt, listOf(
+        "默认从 GitHub Releases 检查新版本, 也可在设置页填写自建更新清单地址。",
         "检测到新版本会展示更新说明, 下载后自动校验并拉起安装。",
-        "地址仅保存在本机, 安装包内不内置任何服务器地址; 留空则不检查更新。",
         "更新包下载前与启动时自动清理, 不占存储空间。"
     )),
-    HelpEntry("数据安全", "🔒", listOf(
+    HelpEntry("数据安全", Icons.Filled.Lock, listOf(
         "API 密钥加密存储在本机私有目录, 不上传任何服务器。",
         "刷新请求直连各供应商官方接口。"
     ))
@@ -116,6 +128,7 @@ private fun HelpCard(entry: HelpEntry, expanded: Boolean, onClick: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
+                .semantics { role = Role.Button }
                 .animateContentSize(
                     spring(
                         dampingRatio = Spring.DampingRatioNoBouncy,
@@ -125,7 +138,12 @@ private fun HelpCard(entry: HelpEntry, expanded: Boolean, onClick: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(entry.icon, fontSize = 18.sp)
+                Icon(
+                    entry.icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     entry.title,

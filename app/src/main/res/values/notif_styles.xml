@@ -30,16 +30,19 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:paddingLeft">8dp</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">13sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:maxLines">1</item>
-        <item name="android:textColor">#FF1565C0</item>
+        <!-- 等宽数字: 金额纵向对齐; 颜色由代码按主题/状态设置 -->
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
     </style>
 
     <style name="NFBar" parent="android:Widget.Material.ProgressBar.Horizontal">
         <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">3dp</item>
+        <item name="android:layout_height">4dp</item>
         <item name="android:layout_marginTop">3dp</item>
+        <item name="android:progressTint">?android:attr/colorAccent</item>
         <item name="android:visibility">gone</item>
     </style>
 </resources>

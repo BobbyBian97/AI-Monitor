@@ -5,6 +5,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -17,6 +18,9 @@ object AppLog {
     const val MAX = 500
 
     data class Entry(val time: Long, val level: String, val tag: String, val msg: String)
+
+    /** 变更计数: append/clear 时递增, UI 据此感知日志刷新 */
+    val version = MutableStateFlow(0)
 
     private val buffer = ArrayDeque<Entry>(MAX)
     @Volatile private var file: File? = null
@@ -50,6 +54,7 @@ object AppLog {
             buffer.addLast(e)
             while (buffer.size > MAX) buffer.removeFirst()
         }
+        version.value++
         io.execute {
             runCatching { file?.appendText("${e.time}\t$level\t$tag\t${e.msg}\n") }
         }
@@ -67,6 +72,7 @@ object AppLog {
 
     fun clear() {
         synchronized(buffer) { buffer.clear() }
+        version.value++
         io.execute { runCatching { file?.delete() } }
     }
 

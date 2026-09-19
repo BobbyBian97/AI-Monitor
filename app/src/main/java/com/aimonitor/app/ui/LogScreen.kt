@@ -37,8 +37,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aimonitor.app.data.AppLog
+import androidx.compose.runtime.collectAsState
 import com.aimonitor.app.ui.theme.BadgeShape
 import com.aimonitor.app.ui.theme.LocalStatusColors
+import com.aimonitor.app.ui.theme.onOf
 import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,8 +49,11 @@ fun LogScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val status = LocalStatusColors.current
-    var entries by remember { mutableStateOf(AppLog.entries()) }
     var onlyErrors by remember { mutableStateOf(false) }
+    var askClear by remember { mutableStateOf(false) }
+    // 日志变更计数: append/clear 时自动刷新列表, 无需手动刷新
+    val logVersion by AppLog.version.collectAsState()
+    val entries = remember(logVersion) { AppLog.entries() }
     val shown = if (onlyErrors) entries.filter { it.level == "E" } else entries
 
     ScreenScaffold(
@@ -61,15 +66,22 @@ fun LogScreen(onBack: () -> Unit) {
             }) {
                 Icon(Icons.Filled.ContentCopy, contentDescription = "复制全部")
             }
-            IconButton(onClick = {
-                AppLog.clear()
-                entries = AppLog.entries()
-                Toast.makeText(ctx, "已清空", Toast.LENGTH_SHORT).show()
-            }) {
+            IconButton(onClick = { askClear = true }) {
                 Icon(Icons.Filled.Delete, contentDescription = "清空")
             }
         }
     ) { padding ->
+        if (askClear) {
+            ConfirmDialog(
+                title = "清空日志",
+                text = "将删除全部 ${entries.size} 条本地日志, 不可恢复。",
+                onConfirm = {
+                    AppLog.clear()
+                    askClear = false
+                },
+                onDismiss = { askClear = false }
+            )
+        }
         Column(Modifier.fillMaxSize().padding(padding)) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -86,8 +98,6 @@ fun LogScreen(onBack: () -> Unit) {
                     onClick = { onlyErrors = true },
                     label = { Text("仅错误 ${entries.count { it.level == "E" }}") }
                 )
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = { entries = AppLog.entries() }) { Text("刷新") }
             }
 
             if (shown.isEmpty()) {
@@ -117,7 +127,7 @@ fun LogScreen(onBack: () -> Unit) {
                                     e.level,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White,
+                                    color = onOf(levelColor(e.level)),
                                     modifier = Modifier
                                         .background(levelColor(e.level), BadgeShape)
                                         .padding(horizontal = 5.dp, vertical = 1.dp)

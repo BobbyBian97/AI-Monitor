@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 通知栏「刷新」按钮背景: 中性半透明圆角, 亮暗面板均可读; 文字色由代码按主题设置 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="14dp" />
+    <solid android:color="#1F888888" />
+</shape>

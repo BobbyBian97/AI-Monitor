@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.compose.ui.graphics.toArgb
 import com.aimonitor.app.MainActivity
 import com.aimonitor.app.R
 import java.text.SimpleDateFormat
@@ -26,8 +27,47 @@ object BalanceNotifier {
     private const val MAX_ROWS = 8
     /** 折叠态速览行宽度预算 (半角字符数), 超出以 +N 折叠 */
     private const val COMPACT_WIDTH = 50
-    private val ACCENT = 0xFF1565C0.toInt()
-    private val WARN = 0xFFD93025.toInt()
+
+    /** 通知面板调色板: 跟随用户皮肤取主色, 并按系统通知面板深浅校正可读性 */
+    private class Palette(val accent: Int, val warn: Int)
+
+    private fun resolvePalette(ctx: Context): Palette {
+        val nightDark = (ctx.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val skinId = AppSettings.loadSkinId(ctx)
+        val skin = if (skinId == "system") {
+            com.aimonitor.app.ui.theme.Skins.byId(if (nightDark) "midnight" else "blue")
+        } else {
+            com.aimonitor.app.ui.theme.ImageSkin.resolve(ctx, skinId)
+        }
+        val status = if (nightDark) com.aimonitor.app.ui.theme.DarkStatus
+        else com.aimonitor.app.ui.theme.LightStatus
+        return Palette(accent = readable(skin.primary.toArgb(), nightDark), warn = status.warn.toArgb())
+    }
+
+    /** 主色亮度与面板深浅不匹配时向黑/白混合, 保证通知栏文字可读 */
+    private fun readable(c: Int, onDark: Boolean): Int = when {
+        onDark && luminance(c) < 0.45f -> mix(c, 0xFFFFFF, 0.45f)
+        !onDark && luminance(c) > 0.45f -> mix(c, 0x000000, 0.35f)
+        else -> c
+    }
+
+    private fun luminance(c: Int): Float {
+        val r = (c shr 16) and 0xFF
+        val g = (c shr 8) and 0xFF
+        val b = c and 0xFF
+        return (0.299f * r + 0.587f * g + 0.114f * b) / 255f
+    }
+
+    private fun mix(c: Int, target: Int, frac: Float): Int {
+        fun ch(shift: Int): Int {
+            val v = (c shr shift) and 0xFF
+            val t = (target shr shift) and 0xFF
+            return (v + ((t - v) * frac).toInt()).coerceIn(0, 255)
+        }
+        return (0xFF shl 24) or (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
+    }
 
     private val rowIds = intArrayOf(
         R.id.nf_row_0, R.id.nf_row_1, R.id.nf_row_2, R.id.nf_row_3,
@@ -118,10 +158,12 @@ object BalanceNotifier {
             planTotals.entries.joinToString("") { " · 累计投入 ${"%.1f".format(it.value)} ${it.key}" }
 
         // 展开视图: 全部明细 + 进度条 + 页脚
-        val big = buildViews(ctx, title, rows, footerText, showBars = true)
+        val palette = resolvePalette(ctx)
+        val big = buildViews(ctx, title, rows, footerText, showBars = true, palette)
 
         // 折叠视图: 系统限制 ~48dp, 标题 + 单行账户速览 (警示优先)
-        val compact = if (AppSettings.loadNotifDetail(ctx)) buildCompactViews(ctx, title, rows)
+        val compact = if (AppSettings.loadNotifDetail(ctx))
+            buildCompactViews(ctx, title, rows, palette)
         else null
 
         // 折叠摘要
@@ -140,7 +182,7 @@ object BalanceNotifier {
             .setContentText(summary)
             .apply { compact?.let { setCustomContentView(it) } }
             .setCustomBigContentView(big)
-            .setColor(ACCENT)
+            .setColor(palette.accent)
             .setContentIntent(pi)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -150,7 +192,12 @@ object BalanceNotifier {
     }
 
     /** 折叠态紧凑布局: 标题 + 单行速览, 尽量显示全部账户, 超宽部分以 +N 标注 */
-    private fun buildCompactViews(ctx: Context, title: String, rows: List<Row>): RemoteViews {
+    private fun buildCompactViews(
+        ctx: Context,
+        title: String,
+        rows: List<Row>,
+        palette: Palette
+    ): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.notif_balance_compact)
         rv.setTextViewText(R.id.nf_c_title, title)
         val sorted = rows.sortedByDescending { it.warn }
@@ -167,7 +214,7 @@ object BalanceNotifier {
         var line = parts.joinToString(" · ")
         if (rest > 0) line += "  +$rest"
         rv.setTextViewText(R.id.nf_c_line, line.ifBlank { "暂无数据" })
-        rv.setTextColor(R.id.nf_c_line, if (sorted.any { it.warn }) WARN else ACCENT)
+        rv.setTextColor(R.id.nf_c_line, if (sorted.any { it.warn }) palette.warn else palette.accent)
         return rv
     }
 
@@ -203,6 +250,7 @@ object BalanceNotifier {
         rows: List<Row>,
         footerText: String?,
         showBars: Boolean,
+        palette: Palette,
         maxRows: Int = MAX_ROWS
     ): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.notif_balance)
@@ -212,9 +260,17 @@ object BalanceNotifier {
             rv.setViewVisibility(rowIds[i], View.VISIBLE)
             rv.setTextViewText(nameIds[i], row.name)
             rv.setTextViewText(valIds[i], row.value)
-            rv.setTextColor(valIds[i], if (row.warn) WARN else ACCENT)
+            rv.setTextColor(valIds[i], if (row.warn) palette.warn else palette.accent)
             if (showBars && row.percent != null) {
                 rv.setProgressBar(barIds[i], 100, row.percent.coerceIn(0, 100), false)
+                // 警示行进度条染警示色 (RemoteViews.setColorStateList 需 API 31+,
+                // 低版本走 XML 的系统 colorAccent, 自适应亮暗面板)
+                if (row.warn && android.os.Build.VERSION.SDK_INT >= 31) {
+                    rv.setColorStateList(
+                        barIds[i], "setProgressTintList",
+                        android.content.res.ColorStateList.valueOf(palette.warn)
+                    )
+                }
                 rv.setViewVisibility(barIds[i], View.VISIBLE)
             } else rv.setViewVisibility(barIds[i], View.GONE)
         }
@@ -225,6 +281,7 @@ object BalanceNotifier {
         } else rv.setViewVisibility(R.id.nf_footer_row, View.GONE)
         // 「刷新」按钮: 触发前台服务立即重新拉取并更新通知
         rv.setOnClickPendingIntent(R.id.nf_refresh, refreshPendingIntent(ctx))
+        rv.setTextColor(R.id.nf_refresh, palette.accent)
         return rv
     }
 

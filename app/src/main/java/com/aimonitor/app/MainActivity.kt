@@ -11,6 +11,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -73,7 +74,12 @@ class MainActivity : ComponentActivity() {
             val bgBitmap by produceState<ImageBitmap?>(null, bgPath) {
                 value = withContext(Dispatchers.IO) { decodeBg(bgPath) }
             }
-            val skin = remember(skinId) { ImageSkin.resolve(ctx, skinId) }
+            // "跟随系统"皮肤: 亮色用沧海, 暗色用星夜
+            val systemDark = isSystemInDarkTheme()
+            val skin = remember(skinId, systemDark) {
+                if (skinId == "system") ImageSkin.resolve(ctx, if (systemDark) "midnight" else "blue")
+                else ImageSkin.resolve(ctx, skinId)
+            }
             val vm: MainViewModel = viewModel()
             // Android 13+ 通知权限 (通知栏常驻展示)
             val notifPerm = rememberLauncherForActivityResult(

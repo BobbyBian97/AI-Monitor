@@ -23,7 +23,7 @@
         android:layout_height="1dp"
         android:layout_marginTop="6dp"
         android:layout_marginBottom="2dp"
-        android:background="#1F808080"
+        android:background="#26888888"
         android:orientation="horizontal" />
 
     <LinearLayout android:id="@+id/nf_row_0" style="@style/NFRow">
@@ -116,11 +116,11 @@
             android:text="刷新"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="#FFFFFFFF"
+            android:textColor="?android:attr/textColorPrimary"
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
             android:paddingTop="3dp"
             android:paddingBottom="3dp"
-            android:background="#FF1565C0" />
+            android:background="@drawable/nf_refresh_bg" />
     </LinearLayout>
 </LinearLayout>
