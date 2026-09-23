@@ -235,7 +235,7 @@ object BalanceNotifier {
     private fun widthUnits(s: String): Int =
         s.fold(0) { acc, c -> acc + if (c.code < 0x2E80) 1 else 2 }
 
-    private fun curSymbol(c: String) = when (c) {
+    fun curSymbol(c: String) = when (c) {
         "USD" -> "$"
         "CNY", "RMB" -> "¥"
         "EUR" -> "€"

@@ -11,8 +11,8 @@ android {
         applicationId = "com.aimonitor.app"
         minSdk = 26
         targetSdk = 33
-        versionCode = 39
-        versionName = "1.29"
+        versionCode = 40
+        versionName = "1.30"
     }
 
     buildTypes {
