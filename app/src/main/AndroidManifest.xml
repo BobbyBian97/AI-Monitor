@@ -57,6 +57,19 @@
                 android:value="true" />
         </service>
 
+        <!-- 桌面小部件: 总余量 + 逐账户明细速览, 随后台刷新自动更新 -->
+        <receiver
+            android:name=".data.BalanceWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_balance_info" />
+        </receiver>
+
         <!-- 应用内更新: 安装包通过 content:// 提供给系统安装器 -->
         <provider
             android:name="androidx.core.content.FileProvider"

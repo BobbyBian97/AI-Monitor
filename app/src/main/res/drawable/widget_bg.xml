@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 桌面小部件圆角卡片背景 (颜色随系统深浅切换) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="16dp" />
+    <solid android:color="@color/widget_bg" />
+</shape>

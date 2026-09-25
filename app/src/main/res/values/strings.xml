@@ -2,4 +2,6 @@
 <resources>
     <string name="app_name">AI 余量监控</string>
     <string name="tile_label">AI 余量</string>
+    <string name="widget_label">AI 余量明细</string>
+    <string name="widget_desc">总余量与各账户明细速览, 随后台刷新自动更新, 点击刷新按钮立即重拉</string>
 </resources>

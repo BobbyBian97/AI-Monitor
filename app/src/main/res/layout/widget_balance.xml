@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 桌面小部件布局: 总余量标题 + 逐账户明细(名称/数值/进度条) + 页脚 (结构仿 notif_balance.xml) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/wg_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/widget_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/wg_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="middle"
+            android:textColor="@color/widget_text_primary" />
+
+        <TextView
+            android:id="@+id/wg_refresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:text="刷新"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_text_primary"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:background="@drawable/nf_refresh_bg" />
+    </LinearLayout>
+
+    <!-- 分隔线: RemoteViews 不支持裸 View, 用空 LinearLayout 代替 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="2dp"
+        android:background="@color/widget_divider"
+        android:orientation="horizontal" />
+
+    <LinearLayout android:id="@+id/wg_row_0" style="@style/WGRow">
+        <LinearLayout style="@style/WGRowLine">
+            <TextView android:id="@+id/wg_name_0" style="@style/WGName" />
+            <TextView android:id="@+id/wg_val_0" style="@style/WGVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/wg_bar_0" style="@style/WGBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/wg_row_1" style="@style/WGRow">
+        <LinearLayout style="@style/WGRowLine">
+            <TextView android:id="@+id/wg_name_1" style="@style/WGName" />
+            <TextView android:id="@+id/wg_val_1" style="@style/WGVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/wg_bar_1" style="@style/WGBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/wg_row_2" style="@style/WGRow">
+        <LinearLayout style="@style/WGRowLine">
+            <TextView android:id="@+id/wg_name_2" style="@style/WGName" />
+            <TextView android:id="@+id/wg_val_2" style="@style/WGVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/wg_bar_2" style="@style/WGBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/wg_row_3" style="@style/WGRow">
+        <LinearLayout style="@style/WGRowLine">
+            <TextView android:id="@+id/wg_name_3" style="@style/WGName" />
+            <TextView android:id="@+id/wg_val_3" style="@style/WGVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/wg_bar_3" style="@style/WGBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/wg_row_4" style="@style/WGRow">
+        <LinearLayout style="@style/WGRowLine">
+            <TextView android:id="@+id/wg_name_4" style="@style/WGName" />
+            <TextView android:id="@+id/wg_val_4" style="@style/WGVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/wg_bar_4" style="@style/WGBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/wg_row_5" style="@style/WGRow">
+        <LinearLayout style="@style/WGRowLine">
+            <TextView android:id="@+id/wg_name_5" style="@style/WGName" />
+            <TextView android:id="@+id/wg_val_5" style="@style/WGVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/wg_bar_5" style="@style/WGBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/wg_row_6" style="@style/WGRow">
+        <LinearLayout style="@style/WGRowLine">
+            <TextView android:id="@+id/wg_name_6" style="@style/WGName" />
+            <TextView android:id="@+id/wg_val_6" style="@style/WGVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/wg_bar_6" style="@style/WGBar" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/wg_row_7" style="@style/WGRow">
+        <LinearLayout style="@style/WGRowLine">
+            <TextView android:id="@+id/wg_name_7" style="@style/WGName" />
+            <TextView android:id="@+id/wg_val_7" style="@style/WGVal" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/wg_bar_7" style="@style/WGBar" />
+    </LinearLayout>
+
+    <!-- 弹性占位: 拉伸时把页脚推到底部 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical" />
+
+    <TextView
+        android:id="@+id/wg_footer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="@color/widget_text_secondary" />
+</LinearLayout>

@@ -10,6 +10,7 @@ import com.aimonitor.app.data.AppSettings
 import com.aimonitor.app.data.BalanceNotifier
 import com.aimonitor.app.data.BalanceRepository
 import com.aimonitor.app.data.BalanceResult
+import com.aimonitor.app.data.BalanceWidget
 import com.aimonitor.app.data.ResultCache
 import com.aimonitor.app.data.Updater
 import kotlinx.coroutines.CompletableDeferred
@@ -66,13 +67,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 通知栏常驻展示 (刷新后调用; 设置开关切换时也调用); 通知构建移 IO 线程 */
+    /** 通知栏常驻展示与桌面小部件 (刷新后调用; 设置开关切换时也调用); 构建移 IO 线程 */
     fun updateNotification() {
         val app = getApplication<Application>()
         val accounts = _accounts.value
         val results = _results.value
         viewModelScope.launch(Dispatchers.IO) {
             BalanceNotifier.update(app, accounts, results)
+            BalanceWidget.push(app, accounts, results)
         }
     }
 

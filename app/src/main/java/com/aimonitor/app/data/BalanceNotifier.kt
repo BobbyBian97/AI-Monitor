@@ -29,9 +29,9 @@ object BalanceNotifier {
     private const val COMPACT_WIDTH = 50
 
     /** 通知面板调色板: 跟随用户皮肤取主色, 并按系统通知面板深浅校正可读性 */
-    private class Palette(val accent: Int, val warn: Int)
+    internal class Palette(val accent: Int, val warn: Int)
 
-    private fun resolvePalette(ctx: Context): Palette {
+    internal fun resolvePalette(ctx: Context): Palette {
         val nightDark = (ctx.resources.configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -86,7 +86,7 @@ object BalanceNotifier {
         R.id.nf_bar_4, R.id.nf_bar_5, R.id.nf_bar_6, R.id.nf_bar_7
     )
 
-    private class Row(
+    internal class Row(
         val name: String,
         val value: String,
         val percent: Int? = null,
@@ -122,30 +122,7 @@ object BalanceNotifier {
         ensureChannel(ctx)
 
         val totals = BalanceSummary.currencyTotals(results.values)
-        val rows = accounts.map { a ->
-            when (val r = results[a.id]) {
-                is BalanceResult.Success -> {
-                    Row(
-                        a.displayName,
-                        "%.2f %s".format(r.total, r.currency),
-                        warn = r.total <= a.threshold,
-                        compact = "%.1f%s".format(r.total, curSymbol(r.currency))
-                    )
-                }
-                is BalanceResult.Usage -> {
-                    val txt = r.windows.joinToString(" · ") { "${it.label} ${it.percent}%" }
-                    val maxP = r.windows.maxOfOrNull { it.percent }
-                    Row(
-                        a.displayName, txt.ifBlank { "无用量数据" }, maxP, (maxP ?: 0) >= 80,
-                        compact = maxP?.let { "$it%" } ?: "无数据"
-                    )
-                }
-                is BalanceResult.Info -> Row(a.displayName, r.message.take(20), compact = r.message.take(6))
-                is BalanceResult.Error -> Row(a.displayName, "查询失败", warn = true, compact = "失败")
-                is BalanceResult.Loading -> Row(a.displayName, "刷新中…", compact = "…")
-                else -> Row(a.displayName, "尚未刷新")
-            }
-        }
+        val rows = rowsOf(accounts, results)
 
         val title = if (totals.isEmpty()) "AI 余量监控"
         else "总余量  " + totals.entries.joinToString("   ") { "${"%.2f".format(it.value)} ${it.key}" }
@@ -190,6 +167,31 @@ object BalanceNotifier {
             .build()
         return n
     }
+
+    /** 账户+结果 → 展示行 (通知栏与桌面小部件共用映射) */
+    internal fun rowsOf(accounts: List<Account>, results: Map<Long, BalanceResult>): List<Row> =
+        accounts.map { a ->
+            when (val r = results[a.id]) {
+                is BalanceResult.Success -> Row(
+                    a.displayName,
+                    "%.2f %s".format(r.total, r.currency),
+                    warn = r.total <= a.threshold,
+                    compact = "%.1f%s".format(r.total, curSymbol(r.currency))
+                )
+                is BalanceResult.Usage -> {
+                    val txt = r.windows.joinToString(" · ") { "${it.label} ${it.percent}%" }
+                    val maxP = r.windows.maxOfOrNull { it.percent }
+                    Row(
+                        a.displayName, txt.ifBlank { "无用量数据" }, maxP, (maxP ?: 0) >= 80,
+                        compact = maxP?.let { "$it%" } ?: "无数据"
+                    )
+                }
+                is BalanceResult.Info -> Row(a.displayName, r.message.take(20), compact = r.message.take(6))
+                is BalanceResult.Error -> Row(a.displayName, "查询失败", warn = true, compact = "失败")
+                is BalanceResult.Loading -> Row(a.displayName, "刷新中…", compact = "…")
+                else -> Row(a.displayName, "尚未刷新")
+            }
+        }
 
     /** 折叠态紧凑布局: 标题 + 单行速览, 尽量显示全部账户, 超宽部分以 +N 标注 */
     private fun buildCompactViews(

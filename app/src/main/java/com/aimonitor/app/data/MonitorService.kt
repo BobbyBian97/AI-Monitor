@@ -71,7 +71,8 @@ class MonitorService : Service() {
             val accounts = store.load()
             val n = BalanceNotifier.build(this@MonitorService, accounts, cache.load())
             if (n == null) {
-                stopSelf()
+                // 无账户直接退出; 通知开关关闭时保持存活, 等待可能到来的刷新请求 (桌面小部件)
+                if (accounts.isEmpty()) stopSelf()
             } else {
                 NotificationManagerCompat.from(this@MonitorService)
                     .notify(BalanceNotifier.NOTIF_ID, n)
@@ -81,9 +82,15 @@ class MonitorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_REFRESH) {
-            // 通知栏手动刷新: 不受 appVisible 限制, 立即重拉一次 (不重启定时循环)
-            AppLog.i("APP", "通知栏手动刷新")
-            scope.launch { refreshOnce() }
+            // 手动刷新 (通知栏按钮/桌面小部件): 不受 appVisible 限制, 立即重拉一次
+            AppLog.i("APP", "手动刷新请求")
+            scope.launch {
+                refreshOnce()
+                // 通知开关关闭 (如小部件临时拉起): 刷新完即退出, 不常驻不留通知
+                if (!AppSettings.loadNotifEnabled(this@MonitorService)) stopSelf()
+            }
+            // 开关开启时顺带复活定时循环 (服务此前被杀的场景; 不重置已运行的计时)
+            if (AppSettings.loadNotifEnabled(this) && loopJob?.isActive != true) loop()
         } else {
             loop()
         }
@@ -119,6 +126,8 @@ class MonitorService : Service() {
         } catch (e: Exception) {
             AppLog.e("APP", "磁贴刷新请求失败: ${e.message}")
         }
+        // 桌面小部件同步更新 (无小部件时零开销)
+        BalanceWidget.push(this, accounts, results)
     }
 
     override fun onDestroy() {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 桌面小部件配色 (亮色); 深色变体见 values-night/widget_colors.xml -->
+    <color name="widget_bg">#F7FAFD</color>
+    <color name="widget_text_primary">#1A2333</color>
+    <color name="widget_text_secondary">#7A8699</color>
+    <color name="widget_divider">#14888888</color>
+    <color name="widget_bar_accent">#1565C0</color>
+</resources>
