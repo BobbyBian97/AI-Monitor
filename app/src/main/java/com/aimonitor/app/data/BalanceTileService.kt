@@ -23,6 +23,8 @@ class BalanceTileService : TileService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onStartListening() {
+        // 服务已死且开关为开时拉活 (start 自带 running 去重, 存活时零开销)
+        try { MonitorService.start(applicationContext) } catch (_: Exception) {}
         refreshTile()
     }
 

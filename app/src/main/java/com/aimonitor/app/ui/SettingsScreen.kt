@@ -141,7 +141,7 @@ fun SettingsScreen(
                         }
                     }
                 }
-                Hint("仅 App 在前台时刷新, 退到后台自动停止")
+                Hint("前后台均按此间隔自动刷新; 重启或应用更新后自动恢复")
             }
 
             // ── 皮肤 ──
@@ -246,7 +246,7 @@ fun SettingsScreen(
                         Column(Modifier.weight(1f)) {
                             Text("常驻通知栏展示余量", style = MaterialTheme.typography.titleSmall)
                             Text(
-                                "App 在后台也按设定间隔刷新, 关闭开关即停止",
+                                "App 在后台也按设定间隔刷新, 重启后自动恢复; 关闭开关即停止",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="false"
@@ -30,6 +31,16 @@
             android:name=".data.MonitorService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- 开机完成 / 应用自更新完成后自动恢复后台监控服务 -->
+        <receiver
+            android:name=".data.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!-- 下拉通知栏快速设置磁贴: 开关监控 + 总余量速览 (仅系统可绑定) -->
         <service

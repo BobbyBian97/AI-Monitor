@@ -1,9 +1,11 @@
 package com.aimonitor.app.data
 
 import android.app.Service
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.IBinder
+import android.service.quicksettings.TileService
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CompletableDeferred
@@ -109,6 +111,14 @@ class MonitorService : Service() {
         cache.save(results)
         BalanceNotifier.update(this, accounts, results)
         AppLog.i("APP", "后台刷新 ${accounts.size} 个账户")
+        // 后台刷新完成后主动推送磁贴: ACTIVE_TILE 模式下系统回调 onStartListening 重读新缓存
+        try {
+            TileService.requestListeningState(
+                this, ComponentName(this, BalanceTileService::class.java)
+            )
+        } catch (e: Exception) {
+            AppLog.e("APP", "磁贴刷新请求失败: ${e.message}")
+        }
     }
 
     override fun onDestroy() {
