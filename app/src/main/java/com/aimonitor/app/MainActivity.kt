@@ -35,6 +35,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aimonitor.app.data.AppSettings
 import com.aimonitor.app.data.AppLog
+import com.aimonitor.app.data.BalanceNotifier
 import com.aimonitor.app.data.MonitorService
 import com.aimonitor.app.ui.AddEditAccountScreen
 import com.aimonitor.app.ui.HelpScreen
@@ -65,9 +66,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AppLog.init(applicationContext)
         AppLog.i("APP", "启动 v${BuildConfig.VERSION_NAME}")
+        // 通知深链: 明细行/低余量预警携带 account_id 打开时直达该账户编辑页
+        // (账户已被删除时编辑页按新建渲染)
+        val deepLinkId = intent?.getLongExtra(BalanceNotifier.EXTRA_ACCOUNT_ID, -1L)
+            ?.takeIf { it >= 0 }
         setContent {
             val ctx = LocalContext.current
-            var screen by remember { mutableStateOf<Screen>(Screen.Home) }
+            var screen by remember {
+                mutableStateOf(if (deepLinkId != null) Screen.Edit(deepLinkId) else Screen.Home)
+            }
             var skinId by remember { mutableStateOf(AppSettings.loadSkinId(ctx)) }
             var bgPath by remember { mutableStateOf(AppSettings.loadBgPath(ctx)) }
             // 异步解码: 大图解码不再阻塞首帧

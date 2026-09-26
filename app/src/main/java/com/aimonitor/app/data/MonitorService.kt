@@ -117,6 +117,8 @@ class MonitorService : Service() {
         }
         cache.save(results)
         BalanceNotifier.update(this, accounts, results)
+        // 低余量预警评估 (与前台 MainViewModel.updateNotification 路径互补)
+        BalanceAlerter.evaluate(this, accounts, results)
         AppLog.i("APP", "后台刷新 ${accounts.size} 个账户")
         // 后台刷新完成后主动推送磁贴: ACTIVE_TILE 模式下系统回调 onStartListening 重读新缓存
         try {

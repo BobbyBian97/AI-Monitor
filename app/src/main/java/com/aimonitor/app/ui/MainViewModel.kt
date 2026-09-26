@@ -7,6 +7,7 @@ import com.aimonitor.app.data.Account
 import com.aimonitor.app.data.AccountStore
 import com.aimonitor.app.data.AppLog
 import com.aimonitor.app.data.AppSettings
+import com.aimonitor.app.data.BalanceAlerter
 import com.aimonitor.app.data.BalanceNotifier
 import com.aimonitor.app.data.BalanceRepository
 import com.aimonitor.app.data.BalanceResult
@@ -74,6 +75,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val results = _results.value
         viewModelScope.launch(Dispatchers.IO) {
             BalanceNotifier.update(app, accounts, results)
+            // 低余量预警评估: 此函数是 init/refreshAll/refreshOne/deleteAccount 的公共漏斗
+            BalanceAlerter.evaluate(app, accounts, results)
             BalanceWidget.push(app, accounts, results)
         }
     }

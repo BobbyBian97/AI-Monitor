@@ -72,9 +72,14 @@ object BalanceWidget {
             "${"%.2f".format(it.value)} ${it.key}"
         }
         val palette = BalanceNotifier.resolvePalette(ctx)
-        val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        // 真实数据抓取时间 (与通知栏页脚同口径), 重建小部件不再误显示为当前时间
+        val latest = BalanceNotifier.latestFetchAt(results)
+        val timePart = if (latest > 0L)
+            "更新于 " + SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(latest)) +
+                " · " + BalanceNotifier.relAge(System.currentTimeMillis(), latest)
+        else "暂无数据"
         val footer = if (accounts.isEmpty()) "点击卡片添加账户"
-        else "更新于 $time · ${accounts.size} 个账户" +
+        else "$timePart · ${accounts.size} 个账户" +
             (if (rows.size > maxRows) " · +${rows.size - maxRows} 项" else "")
 
         val rv = RemoteViews(ctx.packageName, R.layout.widget_balance)

@@ -25,6 +25,9 @@ object BalanceNotifier {
     private const val CHANNEL_ID = "balances"
     const val NOTIF_ID = 1001
     private const val MAX_ROWS = 8
+
+    /** 深链 extra: 携带账户 id 打开 App 并直达其编辑页 (明细行点击/低余量预警共用) */
+    const val EXTRA_ACCOUNT_ID = "account_id"
     /** 折叠态速览行宽度预算 (半角字符数), 超出以 +N 折叠 */
     private const val COMPACT_WIDTH = 50
 
@@ -86,12 +89,13 @@ object BalanceNotifier {
         R.id.nf_bar_4, R.id.nf_bar_5, R.id.nf_bar_6, R.id.nf_bar_7
     )
 
-    internal class Row(
+    internal data class Row(
         val name: String,
         val value: String,
         val percent: Int? = null,
         val warn: Boolean = false,
-        val compact: String = "—"
+        val compact: String = "—",
+        val accountId: Long? = null
     )
 
     /** 刷新通知: 设置关闭/无权限/无账户时移除 */
@@ -127,10 +131,18 @@ object BalanceNotifier {
         val title = if (totals.isEmpty()) "AI 余量监控"
         else "总余量  " + totals.entries.joinToString("   ") { "${"%.2f".format(it.value)} ${it.key}" }
 
-        val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        // 真实数据抓取时间 (Success/Usage/Info 均算), 而非通知重建时刻 ——
+        // 服务重启/换皮肤等场景用陈旧缓存重建时, 不再误显示为当前时间
+        val latest = latestFetchAt(results)
+        val timePart = when {
+            latest > 0L -> "更新于 " + SimpleDateFormat("HH:mm", Locale.getDefault())
+                .format(Date(latest)) + " · " + relAge(System.currentTimeMillis(), latest)
+            results.values.any { it is BalanceResult.Error } -> "刷新失败"
+            else -> "暂无数据"
+        }
         // 套餐累计投入 (按币种)
         val planTotals = BalanceSummary.planTotals(accounts)
-        val footerText = "更新于 $time · ${accounts.size} 个账户" +
+        val footerText = "$timePart · ${accounts.size} 个账户" +
             (if (rows.size > MAX_ROWS) " · 仅显示前 $MAX_ROWS 项" else "") +
             planTotals.entries.joinToString("") { " · 累计投入 ${"%.1f".format(it.value)} ${it.key}" }
 
@@ -160,6 +172,9 @@ object BalanceNotifier {
             .apply { compact?.let { setCustomContentView(it) } }
             .setCustomBigContentView(big)
             .setColor(palette.accent)
+            // 系统侧时间戳同样反映数据抓取时刻, 而非每次重建重置
+            .setWhen(if (latest > 0L) latest else System.currentTimeMillis())
+            .setShowWhen(true)
             .setContentIntent(pi)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -190,7 +205,7 @@ object BalanceNotifier {
                 is BalanceResult.Error -> Row(a.displayName, "查询失败", warn = true, compact = "失败")
                 is BalanceResult.Loading -> Row(a.displayName, "刷新中…", compact = "…")
                 else -> Row(a.displayName, "尚未刷新")
-            }
+            }.copy(accountId = a.id)
         }
 
     /** 折叠态紧凑布局: 标题 + 单行速览, 尽量显示全部账户, 超宽部分以 +N 标注 */
@@ -262,6 +277,10 @@ object BalanceNotifier {
             rv.setViewVisibility(rowIds[i], View.VISIBLE)
             rv.setTextViewText(nameIds[i], row.name)
             rv.setTextViewText(valIds[i], row.value)
+            // 明细行点击: 直达该账户编辑页 (请求码 100+i, 与刷新按钮 1/预警 2000+id 不冲突)
+            row.accountId?.let { id ->
+                rv.setOnClickPendingIntent(rowIds[i], deepLinkPi(ctx, id, 100 + i))
+            }
             rv.setTextColor(valIds[i], if (row.warn) palette.warn else palette.accent)
             if (showBars && row.percent != null) {
                 rv.setProgressBar(barIds[i], 100, row.percent.coerceIn(0, 100), false)
@@ -293,6 +312,35 @@ object BalanceNotifier {
         Intent(ctx, MonitorService::class.java).setAction(MonitorService.ACTION_REFRESH),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
+
+    /** 深链 PendingIntent: 打开 App 并直达账户编辑页 (通知明细行/低余量预警共用) */
+    internal fun deepLinkPi(ctx: Context, accountId: Long, reqCode: Int): PendingIntent =
+        PendingIntent.getActivity(
+            ctx, reqCode,
+            Intent(ctx, MainActivity::class.java).putExtra(EXTRA_ACCOUNT_ID, accountId),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+    /** 最近一次成功获取数据的时间 (余额/用量/提示类结果均算), 0 表示无任何成功结果 */
+    internal fun latestFetchAt(results: Map<Long, BalanceResult>): Long =
+        results.values.maxOfOrNull {
+            when (it) {
+                is BalanceResult.Success -> it.fetchedAt
+                is BalanceResult.Usage -> it.fetchedAt
+                is BalanceResult.Info -> it.fetchedAt
+                else -> 0L
+            }
+        } ?: 0L
+
+    /** 相对时间: 刚刚 / N 分钟前 / N 小时前 (负差值落入「刚刚」, 防时钟偏差) */
+    internal fun relAge(now: Long, at: Long): String {
+        val d = now - at
+        return when {
+            d < 60_000L -> "刚刚"
+            d < 3_600_000L -> "${d / 60_000L} 分钟前"
+            else -> "${d / 3_600_000L} 小时前"
+        }
+    }
 
     fun cancel(ctx: Context) = NotificationManagerCompat.from(ctx).cancel(NOTIF_ID)
 

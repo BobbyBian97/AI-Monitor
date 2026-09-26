@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.aimonitor.app.data.AppSettings
+import com.aimonitor.app.data.BalanceAlerter
 import com.aimonitor.app.data.BalanceNotifier
 import com.aimonitor.app.data.MonitorService
 import com.aimonitor.app.ui.theme.BadgeShape
@@ -291,6 +292,39 @@ fun SettingsScreen(
                                 notifDetail = on
                                 AppSettings.saveNotifDetail(ctx, on)
                                 vm.updateNotification()
+                            }
+                        )
+                    }
+                    var lowAlert by remember { mutableStateOf(AppSettings.loadLowBalanceAlertEnabled(ctx)) }
+                    InsetDivider()
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("低余量预警", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "余量跌破阈值时单独提醒, 恢复后自动解除; 点击提醒直达账户",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = lowAlert,
+                            enabled = notifOn,
+                            onCheckedChange = { on ->
+                                lowAlert = on
+                                AppSettings.saveLowBalanceAlertEnabled(ctx, on)
+                                if (on) {
+                                    // 已授权则立即评估一次 (跌破中即刻提醒), 未授权先补请求
+                                    if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(
+                                            ctx, Manifest.permission.POST_NOTIFICATIONS
+                                        ) != PackageManager.PERMISSION_GRANTED
+                                    ) reqPerm.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    else vm.updateNotification()
+                                } else {
+                                    BalanceAlerter.cancelAllAndReset(ctx)
+                                }
                             }
                         )
                     }

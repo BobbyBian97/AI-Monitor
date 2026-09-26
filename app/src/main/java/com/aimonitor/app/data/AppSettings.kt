@@ -18,6 +18,7 @@ object AppSettings {
     private const val KEY_CUSTOM_SKIN = "custom_skin"
     private const val KEY_NOTIF = "notif_enabled"
     private const val KEY_NOTIF_DETAIL = "notif_detail"
+    private const val KEY_LOW_BALANCE_ALERT = "low_balance_alert"
     private const val KEY_UPDATE_URL = "update_manifest_url"
 
     /**
@@ -49,6 +50,15 @@ object AppSettings {
     fun saveNotifDetail(ctx: Context, on: Boolean) {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_NOTIF_DETAIL, on).apply()
+    }
+
+    /** 低余量预警通知: 余量跌破阈值时单独高优先级提醒 (默认开启; 需常驻通知开启) */
+    fun loadLowBalanceAlertEnabled(ctx: Context): Boolean =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_LOW_BALANCE_ALERT, true)
+
+    fun saveLowBalanceAlertEnabled(ctx: Context, on: Boolean) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_LOW_BALANCE_ALERT, on).apply()
     }
 
     fun loadRefreshInterval(ctx: Context): Long {
