@@ -1,34 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- v1.35 精修仪表盘: 表盘环 + 渐变高光弧 + 五刻度 + 双色层次指针 + 双圈中心点 -->
     <!-- 表盘外环 -->
     <path
         android:pathData="M54,54 m-26,0 a26,26 0 1,1 52,0 a26,26 0 1,1 -52,0"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="5"
+        android:strokeWidth="4.5"
         android:fillColor="#00000000" />
-    <!-- 左右对称刻度 -->
+    <!-- 渐变高光弧: 右上象限, 呼应指针方向 -->
     <path
-        android:pathData="M65.3,65.3 L68.8,68.8"
+        android:pathData="M54,28 A26,26 0 0,1 76.5,41"
+        android:strokeWidth="4.5">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="54" android:startY="28"
+                android:endX="76.5" android:endY="41">
+                <item android:offset="0.0" android:color="#FF4FC3F7" />
+                <item android:offset="1.0" android:color="#55FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- 底部弧线五刻度 (正下加长), 圆头 -->
+    <path
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="4"
-        android:strokeLineCap="round" />
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M37.6,63.5 L34.5,65.3" />
     <path
-        android:pathData="M42.7,65.3 L39.2,68.8"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="4"
-        android:strokeLineCap="round" />
-    <!-- 指针 -->
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M44.5,70.5 L42.8,73.5" />
     <path
-        android:pathData="M54,54 L66,42"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,73 L54,77.5" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M63.5,70.5 L65.3,73.5" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M70.4,63.5 L73.5,65.3" />
+    <!-- 双色层次指针: 白色主针 + 浅蓝配重尾 -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L62.5,39.3" />
+    <path
         android:strokeColor="#4FC3F7"
-        android:strokeWidth="6"
-        android:strokeLineCap="round" />
-    <!-- 中心点 -->
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L50.2,60.6" />
+    <!-- 中心点: 白圈 + 内嵌浅蓝 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54 m-5.5,0 a5.5,5.5 0 1,0 11,0 a5.5,5.5 0 1,0 -11,0" />
     <path
         android:fillColor="#4FC3F7"
-        android:pathData="M54,54 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" />
+        android:pathData="M54,54 m-2.6,0 a2.6,2.6 0 1,0 5.2,0 a2.6,2.6 0 1,0 -5.2,0" />
 </vector>
