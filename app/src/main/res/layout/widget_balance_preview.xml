@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 明细组件选择器预览 (API 31+ previewLayout): 真实布局的静态样例, 仅选择器内渲染 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.com/android/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/widget_bg"
+    tools:ignore="HardcodedText">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="总余量  128.40 USD   88.00 CNY"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:textColor="@color/widget_bar_accent" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="2dp"
+        android:background="@color/widget_divider"
+        android:orientation="horizontal" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="DeepSeek"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:textColor="@color/widget_text_primary" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="8dp"
+            android:text="45.20 $"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_text_primary" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="5dp">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="OpenCode Go"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:textColor="@color/widget_text_primary" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="8dp"
+            android:text="weekly 36%"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_text_primary" />
+    </LinearLayout>
+    <ProgressBar
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="3dp"
+        style="android:Widget.Material.ProgressBar.Horizontal"
+        android:progress="36" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="5dp">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="中转站"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:textColor="@color/widget_text_primary" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="8dp"
+            android:text="8.90 $"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_warn" />
+    </LinearLayout>
+    <ProgressBar
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="3dp"
+        style="android:Widget.Material.ProgressBar.Horizontal"
+        android:progress="85"
+        android:progressTint="@color/widget_warn" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="更新于 09:30 · 刚刚 · 3 个账户"
+        android:textSize="11sp"
+        android:maxLines="1"
+        android:textColor="@color/widget_text_secondary" />
+</LinearLayout>

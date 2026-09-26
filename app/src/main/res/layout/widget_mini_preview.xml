@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 迷你组件选择器预览 (API 31+ previewLayout): 真实布局的静态样例, 仅选择器内渲染 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.com/android/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_bg"
+    tools:ignore="HardcodedText">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="128.40 $  ·  88.00 ¥"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/widget_bar_accent" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="3 个账户 · 刚刚"
+            android:textSize="11sp"
+            android:maxLines="1"
+            android:textColor="@color/widget_text_secondary" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="10dp"
+        android:text="刷新"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/widget_text_primary"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp"
+        android:background="@drawable/nf_refresh_bg" />
+</LinearLayout>

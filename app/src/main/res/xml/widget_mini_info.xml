@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 迷你小部件元数据: 约 3x1 起步可缩到 2x1, 无配置页; 30 分钟兜底刷新 (主要靠后台服务推送) -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="64dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="1"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_mini"
+    android:widgetCategory="home_screen"
+    android:previewImage="@drawable/widget_mini_preview"
+    android:previewLayout="@layout/widget_mini_preview"
+    android:description="@string/widget_mini_desc" />

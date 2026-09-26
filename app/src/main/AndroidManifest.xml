@@ -70,6 +70,30 @@
                 android:resource="@xml/widget_balance_info" />
         </receiver>
 
+        <!-- 迷你小部件: 一行总余量速览, 无配置页 -->
+        <receiver
+            android:name=".data.MiniWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_mini_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_mini_info" />
+        </receiver>
+
+        <!-- 明细小部件配置页: 添加组件时选择显示账户 (exported=false, 由系统 API 拉起) -->
+        <activity
+            android:name=".ui.WidgetConfigActivity"
+            android:exported="false"
+            android:label="@string/widget_config_title"
+            android:theme="@style/Theme.AIMonitor">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- 应用内更新: 安装包通过 content:// 提供给系统安装器 -->
         <provider
             android:name="androidx.core.content.FileProvider"

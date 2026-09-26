@@ -3,5 +3,8 @@
     <string name="app_name">AI 余量监控</string>
     <string name="tile_label">AI 余量</string>
     <string name="widget_label">AI 余量明细</string>
-    <string name="widget_desc">总余量与各账户明细速览, 随后台刷新自动更新, 点击刷新按钮立即重拉</string>
+    <string name="widget_desc">总余量与各账户明细速览, 添加时可选择显示哪些账户, 点击账户行直达编辑页</string>
+    <string name="widget_mini_label">AI 余量速览</string>
+    <string name="widget_mini_desc">迷你组件: 一行速览各币种总余量, 随后台刷新自动更新</string>
+    <string name="widget_config_title">小部件账户筛选</string>
 </resources>

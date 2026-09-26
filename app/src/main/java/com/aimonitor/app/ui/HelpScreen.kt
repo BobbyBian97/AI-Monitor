@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.SystemUpdateAlt
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -72,6 +73,12 @@ private val helpEntries = listOf(
         "低余量预警: 余量跌破账户阈值时单独高优先级提醒, 恢复后自动解除; 可在设置中开关。",
         "设置中「折叠时显示明细」可关闭折叠态明细, 仅保留系统默认摘要。",
         "点击通知回到 App。"
+    )),
+    HelpEntry("桌面小部件", Icons.Filled.Widgets, listOf(
+        "两种组件: 「AI 余量明细」显示总余量 + 逐账户明细; 「AI 余量速览」迷你版只显示各币种总余量, 占屏更小。",
+        "明细组件添加时进入配置页勾选显示哪些账户 (全部不勾 = 显示全部); 长按已放置的组件可随时重新配置, 多个组件各显所选。",
+        "点击明细行直达该账户编辑页; 低余量/查询失败的账户自动排到最前, 且标题染警示色。",
+        "「刷新」按钮立即重拉一次; 其余时间随后台刷新自动更新。"
     )),
     HelpEntry("订阅花费统计", Icons.Filled.Payments, listOf(
         "编辑账户时可设置套餐: 每期价格 + 周期 (周/月/季/年) + 购买日期。",
